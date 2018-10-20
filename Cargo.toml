@@ -1,0 +1,17 @@
+[package]
+name = "meowhash"
+version = "0.1.0"
+authors = ["Bodil Stokke <bodil@bodil.org>"]
+license = "MPL-2.0+"
+description = "Meow hash function"
+repository = "https://github.com/bodil/meowhash-rs"
+documentation = "https://docs.rs/meowhash"
+readme = "README.md"
+categories = ["algorithms", "no-std"]
+keywords = ["meow", "hash", "digest"]
+
+[dependencies]
+digest = "0.8.0"
+
+[dev-dependencies]
+proptest = "0.8.7"

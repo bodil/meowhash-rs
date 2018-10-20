@@ -1,0 +1,14 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+cache:
+  directories:
+    - /home/travis/.cargo
+install:
+  - rustup toolchain add nightly
+  - rustup component add --toolchain nightly clippy-preview; true
+script:
+  - cargo +nightly clippy -- -D warnings
+  - cargo test
