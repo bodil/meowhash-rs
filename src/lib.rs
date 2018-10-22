@@ -70,11 +70,29 @@ unsafe fn aes_rotate(a: &mut MeowLane, b: &mut MeowLane) {
 
 #[inline]
 #[target_feature(enable = "aes")]
+unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
+    aes_rotate(a, &mut b[0]);
+    aes_rotate(a, &mut b[1]);
+    aes_rotate(a, &mut b[2]);
+    aes_rotate(a, &mut b[3]);
+}
+
+#[inline]
+#[target_feature(enable = "aes")]
 unsafe fn aes_merge(a: &mut MeowLane, b: &MeowLane) {
     a.l0 = _mm_aesdec_si128(a.l0, b.l0);
     a.l1 = _mm_aesdec_si128(a.l1, b.l1);
     a.l2 = _mm_aesdec_si128(a.l2, b.l2);
     a.l3 = _mm_aesdec_si128(a.l3, b.l3);
+}
+
+#[inline]
+#[target_feature(enable = "aes")]
+unsafe fn aes_merge_lanes(a: &mut [MeowLane], b: &[MeowLane]) {
+    aes_merge(&mut a[0], &b[0]);
+    aes_merge(&mut a[1], &b[1]);
+    aes_merge(&mut a[2], &b[2]);
+    aes_merge(&mut a[3], &b[3]);
 }
 
 /// Meow hasher.
@@ -150,50 +168,53 @@ impl MeowHasher {
         (self.buf.as_ptr() as *mut u8).add(self.index)
     }
 
-    fn finalise(&mut self) -> MeowLane {
+    #[target_feature(enable = "aes")]
+    unsafe fn feed(&mut self, data: &[u8]) {
+        let mut src_ptr = data.as_ptr();
+        let mut src_left = data.len();
+        let mut buf_left = self.left();
+
+        while src_left >= buf_left {
+            ptr::copy_nonoverlapping(src_ptr, self.buf_ptr(), buf_left);
+
+            aes_merge_lanes(&mut self.lanes, &self.buf);
+
+            src_left -= buf_left;
+            src_ptr = src_ptr.add(buf_left);
+            buf_left = Self::block_size();
+            self.index = 0;
+        }
+
+        if src_left > 0 {
+            ptr::copy_nonoverlapping(src_ptr, self.buf_ptr(), src_left);
+            self.index += src_left;
+        }
+    }
+
+    #[target_feature(enable = "aes")]
+    unsafe fn finalise(&mut self) -> MeowLane {
         let mut r0 = MeowLane::new(self.seed);
         let empty = MeowLane::new(self.seed);
 
-        unsafe {
-            if self.index > 0 {
-                // Pad the last block if needed and merge it.
-                let mut empty_block = self.block();
-                let src_ptr = (&mut empty_block as *mut _ as *mut u8).add(self.index);
-                let dest_ptr = self.buf_ptr();
-                ptr::copy_nonoverlapping(src_ptr, dest_ptr, self.left());
-
-                aes_merge(&mut self.lanes[0], &self.buf[0]);
-                aes_merge(&mut self.lanes[1], &self.buf[1]);
-                aes_merge(&mut self.lanes[2], &self.buf[2]);
-                aes_merge(&mut self.lanes[3], &self.buf[3]);
-            }
-
-            aes_rotate(&mut r0, &mut self.lanes[0]);
-            aes_rotate(&mut r0, &mut self.lanes[1]);
-            aes_rotate(&mut r0, &mut self.lanes[2]);
-            aes_rotate(&mut r0, &mut self.lanes[3]);
-
-            aes_rotate(&mut r0, &mut self.lanes[0]);
-            aes_rotate(&mut r0, &mut self.lanes[1]);
-            aes_rotate(&mut r0, &mut self.lanes[2]);
-            aes_rotate(&mut r0, &mut self.lanes[3]);
-
-            aes_rotate(&mut r0, &mut self.lanes[0]);
-            aes_rotate(&mut r0, &mut self.lanes[1]);
-            aes_rotate(&mut r0, &mut self.lanes[2]);
-            aes_rotate(&mut r0, &mut self.lanes[3]);
-
-            aes_rotate(&mut r0, &mut self.lanes[0]);
-            aes_rotate(&mut r0, &mut self.lanes[1]);
-            aes_rotate(&mut r0, &mut self.lanes[2]);
-            aes_rotate(&mut r0, &mut self.lanes[3]);
-
-            aes_merge(&mut r0, &empty);
-            aes_merge(&mut r0, &empty);
-            aes_merge(&mut r0, &empty);
-            aes_merge(&mut r0, &empty);
-            aes_merge(&mut r0, &empty);
+        if self.index > 0 {
+            // Pad the last block if needed and merge it.
+            let mut empty_block = self.block();
+            let src_ptr = (&mut empty_block as *mut _ as *mut u8).add(self.index);
+            let dest_ptr = self.buf_ptr();
+            ptr::copy_nonoverlapping(src_ptr, dest_ptr, self.left());
+            aes_merge_lanes(&mut self.lanes, &self.buf);
         }
+
+        aes_rotate_lanes(&mut r0, &mut self.lanes);
+        aes_rotate_lanes(&mut r0, &mut self.lanes);
+        aes_rotate_lanes(&mut r0, &mut self.lanes);
+        aes_rotate_lanes(&mut r0, &mut self.lanes);
+
+        aes_merge(&mut r0, &empty);
+        aes_merge(&mut r0, &empty);
+        aes_merge(&mut r0, &empty);
+        aes_merge(&mut r0, &empty);
+        aes_merge(&mut r0, &empty);
 
         r0
     }
@@ -207,29 +228,7 @@ impl Digest for MeowHasher {
     }
 
     fn input<B: AsRef<[u8]>>(&mut self, data: B) {
-        let data = data.as_ref();
-        let mut src_ptr = data.as_ptr();
-        let mut src_left = data.len();
-        let mut buf_left = self.left();
-        unsafe {
-            while src_left >= buf_left {
-                ptr::copy_nonoverlapping(src_ptr, self.buf_ptr(), buf_left);
-
-                aes_merge(&mut self.lanes[0], &self.buf[0]);
-                aes_merge(&mut self.lanes[1], &self.buf[1]);
-                aes_merge(&mut self.lanes[2], &self.buf[2]);
-                aes_merge(&mut self.lanes[3], &self.buf[3]);
-
-                src_left -= buf_left;
-                src_ptr = src_ptr.add(buf_left);
-                buf_left = Self::block_size();
-                self.index = 0;
-            }
-            if src_left > 0 {
-                ptr::copy_nonoverlapping(src_ptr, self.buf_ptr(), src_left);
-                self.index += src_left;
-            }
-        }
+        unsafe { self.feed(data.as_ref()) }
     }
 
     fn chain<B: AsRef<[u8]>>(mut self, data: B) -> Self {
@@ -238,7 +237,7 @@ impl Digest for MeowHasher {
     }
 
     fn result(mut self) -> GenericArray<u8, Self::OutputSize> {
-        GenericArray::clone_from_slice(self.finalise().as_bytes())
+        GenericArray::clone_from_slice(unsafe { self.finalise() }.as_bytes())
     }
 
     fn reset(&mut self) {
@@ -246,7 +245,7 @@ impl Digest for MeowHasher {
     }
 
     fn result_reset(&mut self) -> GenericArray<u8, Self::OutputSize> {
-        let result = self.finalise();
+        let result = unsafe { self.finalise() };
         self.reset();
         GenericArray::clone_from_slice(result.as_bytes())
     }
