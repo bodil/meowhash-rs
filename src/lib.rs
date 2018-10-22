@@ -56,6 +56,7 @@ impl MeowLane {
 }
 
 #[inline]
+#[target_feature(enable="aes")]
 unsafe fn aes_rotate(a: &mut MeowLane, b: &mut MeowLane) {
     a.l0 = _mm_aesdec_si128(a.l0, b.l0);
     a.l1 = _mm_aesdec_si128(a.l1, b.l1);
@@ -71,6 +72,7 @@ unsafe fn aes_rotate(a: &mut MeowLane, b: &mut MeowLane) {
 
 #[inline]
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_ptr_alignment))]
+#[target_feature(enable="aes")]
 unsafe fn aes_load(s: &mut MeowLane, from: *const u8) {
     s.l0 = _mm_aesdec_si128(s.l0, ptr::read_unaligned(from as *const __m128i));
     s.l1 = _mm_aesdec_si128(
@@ -88,6 +90,7 @@ unsafe fn aes_load(s: &mut MeowLane, from: *const u8) {
 }
 
 #[inline]
+#[target_feature(enable="aes")]
 unsafe fn aes_merge(a: &mut MeowLane, b: &MeowLane) {
     a.l0 = _mm_aesdec_si128(a.l0, b.l0);
     a.l1 = _mm_aesdec_si128(a.l1, b.l1);
