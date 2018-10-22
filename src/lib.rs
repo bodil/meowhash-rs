@@ -63,11 +63,9 @@ unsafe fn aes_rotate(a: &mut MeowLane, b: &mut MeowLane) {
     a.l2 = _mm_aesdec_si128(a.l2, b.l2);
     a.l3 = _mm_aesdec_si128(a.l3, b.l3);
 
-    let tmp = b.l0;
-    b.l0 = b.l1;
-    b.l1 = b.l2;
-    b.l2 = b.l3;
-    b.l3 = tmp;
+    let tmp = ptr::read(&b.l0);
+    ptr::copy(&b.l1, &mut b.l0, 3);
+    ptr::write(&mut b.l3, tmp);
 }
 
 #[inline]
