@@ -71,99 +71,12 @@ unsafe fn aes_rotate(a: &mut MeowLane, b: &mut MeowLane) {
 }
 
 #[inline]
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_ptr_alignment))]
-#[target_feature(enable = "aes")]
-unsafe fn aes_load(s: &mut MeowLane, from: *const u8) {
-    s.l0 = _mm_aesdec_si128(s.l0, ptr::read_unaligned(from as *const __m128i));
-    s.l1 = _mm_aesdec_si128(
-        s.l1,
-        ptr::read_unaligned((from as *const __m128i).offset(1)),
-    );
-    s.l2 = _mm_aesdec_si128(
-        s.l2,
-        ptr::read_unaligned((from as *const __m128i).offset(2)),
-    );
-    s.l3 = _mm_aesdec_si128(
-        s.l3,
-        ptr::read_unaligned((from as *const __m128i).offset(3)),
-    );
-}
-
-#[inline]
 #[target_feature(enable = "aes")]
 unsafe fn aes_merge(a: &mut MeowLane, b: &MeowLane) {
     a.l0 = _mm_aesdec_si128(a.l0, b.l0);
     a.l1 = _mm_aesdec_si128(a.l1, b.l1);
     a.l2 = _mm_aesdec_si128(a.l2, b.l2);
     a.l3 = _mm_aesdec_si128(a.l3, b.l3);
-}
-
-fn meow_hash_1(seed: u128, source: &[u8]) -> MeowLane {
-    let mut len = source.len() as u64;
-
-    unsafe {
-        let iv = MeowLane::new(seed);
-
-        let mut s0123 = iv;
-        let mut s4567 = iv;
-        let mut s89ab = iv;
-        let mut scdef = iv;
-
-        let mut block_count = len >> 8;
-        len -= block_count << 8;
-        let mut src_ptr = source.as_ptr();
-
-        while block_count > 0 {
-            aes_load(&mut s0123, src_ptr);
-            src_ptr = src_ptr.add(mem::size_of::<MeowLane>());
-            aes_load(&mut s4567, src_ptr);
-            src_ptr = src_ptr.add(mem::size_of::<MeowLane>());
-            aes_load(&mut s89ab, src_ptr);
-            src_ptr = src_ptr.add(mem::size_of::<MeowLane>());
-            aes_load(&mut scdef, src_ptr);
-            src_ptr = src_ptr.add(mem::size_of::<MeowLane>());
-            block_count -= 1;
-        }
-
-        if len > 0 {
-            let partial = [iv, iv, iv, iv];
-            let dest_ptr = partial.as_ptr() as *mut u8;
-            ptr::copy_nonoverlapping(src_ptr, dest_ptr, len as usize);
-            aes_merge(&mut s0123, &partial[0]);
-            aes_merge(&mut s4567, &partial[1]);
-            aes_merge(&mut s89ab, &partial[2]);
-            aes_merge(&mut scdef, &partial[3]);
-        }
-
-        let mut r0 = iv;
-        aes_rotate(&mut r0, &mut s0123);
-        aes_rotate(&mut r0, &mut s4567);
-        aes_rotate(&mut r0, &mut s89ab);
-        aes_rotate(&mut r0, &mut scdef);
-
-        aes_rotate(&mut r0, &mut s0123);
-        aes_rotate(&mut r0, &mut s4567);
-        aes_rotate(&mut r0, &mut s89ab);
-        aes_rotate(&mut r0, &mut scdef);
-
-        aes_rotate(&mut r0, &mut s0123);
-        aes_rotate(&mut r0, &mut s4567);
-        aes_rotate(&mut r0, &mut s89ab);
-        aes_rotate(&mut r0, &mut scdef);
-
-        aes_rotate(&mut r0, &mut s0123);
-        aes_rotate(&mut r0, &mut s4567);
-        aes_rotate(&mut r0, &mut s89ab);
-        aes_rotate(&mut r0, &mut scdef);
-
-        aes_merge(&mut r0, &iv);
-        aes_merge(&mut r0, &iv);
-        aes_merge(&mut r0, &iv);
-        aes_merge(&mut r0, &iv);
-        aes_merge(&mut r0, &iv);
-
-        r0
-    }
 }
 
 /// Meow hasher.
@@ -187,12 +100,11 @@ impl Default for MeowHasher {
 }
 
 impl MeowHasher {
-    /// Compute the hash of a chunk of data using the provided seed.
-    ///
-    /// This is a little faster than using `input` and `result`, because it
-    /// doesn't have to keep an intermediate buffer.
+    /// Compute the hash of a chunk of data directly using the provided seed.
     pub fn digest_with_seed(seed: u128, data: &[u8]) -> GenericArray<u8, U64> {
-        GenericArray::clone_from_slice(meow_hash_1(seed, data).as_bytes())
+        let mut hasher = MeowHasher::with_seed(seed);
+        hasher.input(&data);
+        hasher.result()
     }
 
     /// Create a new hasher instance with the provided seed.
@@ -346,11 +258,10 @@ impl Digest for MeowHasher {
     }
 
     /// Compute the hash of a chunk of data directly.
-    ///
-    /// This is a little faster than using `input` and `result`, because it
-    /// doesn't have to keep an intermediate buffer.
     fn digest(data: &[u8]) -> GenericArray<u8, Self::OutputSize> {
-        GenericArray::clone_from_slice(meow_hash_1(0, data).as_bytes())
+        let mut hasher = MeowHasher::with_seed(0);
+        hasher.input(&data);
+        hasher.result()
     }
 }
 
