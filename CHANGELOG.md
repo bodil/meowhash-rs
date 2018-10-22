@@ -8,6 +8,10 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Performance improvements. (#1, #2)
+
 ## [0.1.0] - 2018-10-20
 
 - Initial release.
