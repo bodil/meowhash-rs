@@ -45,10 +45,10 @@ fn hash_4_16m(b: &mut Bencher) {
     hash_n(16 * 1024 * 1024, b)
 }
 
-// #[bench]
-// fn hash_5_1g(b: &mut Bencher) {
-//     hash_n(1024 * 1024 * 1024, b)
-// }
+#[bench]
+fn hash_5_1g(b: &mut Bencher) {
+    hash_n(1024 * 1024 * 1024, b)
+}
 
 fn digest_n(size: usize, b: &mut Bencher) {
     let blob = rand_blob(size);
@@ -75,7 +75,7 @@ fn digest_4_16m(b: &mut Bencher) {
     digest_n(16 * 1024 * 1024, b)
 }
 
-// #[bench]
-// fn digest_5_1g(b: &mut Bencher) {
-//     digest_n(1024 * 1024 * 1024, b)
-// }
+#[bench]
+fn digest_5_1g(b: &mut Bencher) {
+    digest_n(1024 * 1024 * 1024, b)
+}
