@@ -14,4 +14,4 @@ keywords = ["meow", "hash", "digest"]
 digest = "0.8.0"
 
 [dev-dependencies]
-proptest = "0.8.7"
+proptest = "0.9.1"
