@@ -7,8 +7,7 @@ cache:
   directories:
     - /home/travis/.cargo
 install:
-  - rustup toolchain add nightly
-  - rustup component add --toolchain nightly clippy-preview; true
+  - rustup component add clippy; true
 script:
-  - cargo +nightly clippy -- -D warnings
+  - cargo clippy -- -D warnings
   - cargo test
