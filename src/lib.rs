@@ -268,7 +268,7 @@ mod test {
     use proptest::collection::vec;
     use proptest::num::{u128, u8, usize};
 
-    proptest!{
+    proptest! {
         #[test]
         fn hash_same_data(seed in u128::ANY, blob in vec(u8::ANY, 0..65536)) {
             let mut hasher = MeowHasher::with_seed(seed);
