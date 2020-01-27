@@ -23,55 +23,36 @@
 #![forbid(rust_2018_idioms)]
 #![deny(nonstandard_style)]
 #![warn(unreachable_pub, missing_docs)]
-
-#[cfg(target_arch = "x86")]
-use core::arch::x86::*;
-#[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::*;
+#![cfg_attr(target_arch = "aarch64", feature(aarch64_target_feature, stdsimd))]
 
 use core::mem;
 use core::ptr;
-use core::slice;
 use digest::generic_array::{
     typenum::{consts::*, Unsigned},
     GenericArray,
 };
 use digest::Digest;
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+mod x86;
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+use x86::{aes_merge, aes_rotate, Simd128};
+
+#[cfg(target_arch = "aarch64")]
+mod arm;
+#[cfg(target_arch = "aarch64")]
+use arm::{aes_merge, aes_rotate, Simd128};
+
 #[derive(Clone, Copy)]
-struct MeowLane {
-    l0: __m128i,
-    l1: __m128i,
-    l2: __m128i,
-    l3: __m128i,
-}
-
-impl MeowLane {
-    fn new(seed: u128) -> Self {
-        unsafe { mem::transmute([seed, seed, seed, seed]) }
-    }
-
-    fn as_bytes(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(self as *const _ as *const u8, mem::size_of::<MeowLane>()) }
-    }
+pub(crate) struct MeowLane {
+    l0: Simd128,
+    l1: Simd128,
+    l2: Simd128,
+    l3: Simd128,
 }
 
 #[inline]
-#[target_feature(enable = "aes")]
-unsafe fn aes_rotate(a: &mut MeowLane, b: &mut MeowLane) {
-    a.l0 = _mm_aesdec_si128(a.l0, b.l0);
-    a.l1 = _mm_aesdec_si128(a.l1, b.l1);
-    a.l2 = _mm_aesdec_si128(a.l2, b.l2);
-    a.l3 = _mm_aesdec_si128(a.l3, b.l3);
-
-    let tmp = ptr::read(&b.l0);
-    ptr::copy(&b.l1, &mut b.l0, 3);
-    ptr::write(&mut b.l3, tmp);
-}
-
-#[inline]
-#[target_feature(enable = "aes")]
-unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
+pub(crate) unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
     aes_rotate(a, &mut b[0]);
     aes_rotate(a, &mut b[1]);
     aes_rotate(a, &mut b[2]);
@@ -79,23 +60,27 @@ unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
 }
 
 #[inline]
-#[target_feature(enable = "aes")]
-unsafe fn aes_merge(a: &mut MeowLane, b: &MeowLane) {
-    a.l0 = _mm_aesdec_si128(a.l0, b.l0);
-    a.l1 = _mm_aesdec_si128(a.l1, b.l1);
-    a.l2 = _mm_aesdec_si128(a.l2, b.l2);
-    a.l3 = _mm_aesdec_si128(a.l3, b.l3);
-}
-
-#[inline]
-#[target_feature(enable = "aes")]
-unsafe fn aes_merge_lanes(a: &mut [MeowLane], b: &[MeowLane]) {
+pub(crate) unsafe fn aes_merge_lanes(a: &mut [MeowLane], b: &[MeowLane]) {
     aes_merge(&mut a[0], &b[0]);
     aes_merge(&mut a[1], &b[1]);
     aes_merge(&mut a[2], &b[2]);
     aes_merge(&mut a[3], &b[3]);
 }
 
+impl MeowLane {
+    pub(crate) fn new(seed: u128) -> Self {
+        unsafe { core::mem::transmute([seed, seed, seed, seed]) }
+    }
+
+    pub(crate) fn as_bytes(&self) -> &[u8] {
+        unsafe {
+            core::slice::from_raw_parts(
+                self as *const _ as *const u8,
+                core::mem::size_of::<MeowLane>(),
+            )
+        }
+    }
+}
 /// Meow hasher.
 ///
 /// An implementation of the [Meow hasher][meow-hasher] providing the
@@ -169,7 +154,6 @@ impl MeowHasher {
         (self.buf.as_ptr() as *mut u8).add(self.index)
     }
 
-    #[target_feature(enable = "aes")]
     unsafe fn feed(&mut self, data: &[u8]) {
         let mut src_ptr = data.as_ptr();
         let mut src_left = data.len();
@@ -192,7 +176,6 @@ impl MeowHasher {
         }
     }
 
-    #[target_feature(enable = "aes")]
     unsafe fn finalise(&mut self) -> MeowLane {
         let mut r0 = MeowLane::new(self.seed);
         let empty = MeowLane::new(self.seed);
