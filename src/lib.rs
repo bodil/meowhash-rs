@@ -24,7 +24,11 @@
 #![deny(nonstandard_style)]
 #![warn(unreachable_pub, missing_docs)]
 
+#[cfg(target_arch = "x86")]
+use core::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
+
 use core::mem;
 use core::ptr;
 use core::slice;
