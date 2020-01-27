@@ -13,8 +13,8 @@
 //!
 //! It is *not* cryptographically secure.
 //!
-//! This implementation only supports the `x86_64` architecture, as it relies on
-//! the AES hardware extensions of modern x86 CPUs.
+//! This implementation currently only supports the `x86`, `x86_64` and
+//! `aarch64` architectures.
 //!
 //! [meow-hasher]: https://mollyrocket.com/meowhash
 //! [Digest]: https://docs.rs/digest/latest/digest/trait.Digest.html
