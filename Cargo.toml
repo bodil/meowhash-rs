@@ -9,6 +9,7 @@ documentation = "https://docs.rs/meowhash"
 readme = "README.md"
 categories = ["algorithms", "no-std"]
 keywords = ["meow", "hash", "digest"]
+edition = "2018"
 
 [dependencies]
 digest = "0.8.0"

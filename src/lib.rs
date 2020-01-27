@@ -20,12 +20,9 @@
 //! [Digest]: https://docs.rs/digest/latest/digest/trait.Digest.html
 
 #![no_std]
-
-extern crate digest;
-
-#[cfg(test)]
-#[macro_use]
-extern crate proptest;
+#![forbid(rust_2018_idioms)]
+#![deny(nonstandard_style)]
+#![warn(unreachable_pub, missing_docs)]
 
 use core::arch::x86_64::*;
 use core::mem;
@@ -267,6 +264,7 @@ mod test {
     use super::*;
     use proptest::collection::vec;
     use proptest::num::{u128, u8, usize};
+    use proptest::proptest;
 
     proptest! {
         #[test]
