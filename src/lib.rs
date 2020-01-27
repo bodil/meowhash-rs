@@ -44,7 +44,7 @@ mod arm;
 use arm::{aes_merge, aes_rotate, Simd128};
 
 #[derive(Clone, Copy)]
-pub(crate) struct MeowLane {
+struct MeowLane {
     l0: Simd128,
     l1: Simd128,
     l2: Simd128,
@@ -52,7 +52,7 @@ pub(crate) struct MeowLane {
 }
 
 #[inline]
-pub(crate) unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
+unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
     aes_rotate(a, &mut b[0]);
     aes_rotate(a, &mut b[1]);
     aes_rotate(a, &mut b[2]);
@@ -60,7 +60,7 @@ pub(crate) unsafe fn aes_rotate_lanes(a: &mut MeowLane, b: &mut [MeowLane]) {
 }
 
 #[inline]
-pub(crate) unsafe fn aes_merge_lanes(a: &mut [MeowLane], b: &[MeowLane]) {
+unsafe fn aes_merge_lanes(a: &mut [MeowLane], b: &[MeowLane]) {
     aes_merge(&mut a[0], &b[0]);
     aes_merge(&mut a[1], &b[1]);
     aes_merge(&mut a[2], &b[2]);
@@ -68,11 +68,11 @@ pub(crate) unsafe fn aes_merge_lanes(a: &mut [MeowLane], b: &[MeowLane]) {
 }
 
 impl MeowLane {
-    pub(crate) fn new(seed: u128) -> Self {
+    fn new(seed: u128) -> Self {
         unsafe { core::mem::transmute([seed, seed, seed, seed]) }
     }
 
-    pub(crate) fn as_bytes(&self) -> &[u8] {
+    fn as_bytes(&self) -> &[u8] {
         unsafe {
             core::slice::from_raw_parts(
                 self as *const _ as *const u8,
