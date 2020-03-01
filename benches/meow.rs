@@ -21,7 +21,7 @@ fn hash_n(size: usize, b: &mut Bencher) {
     b.iter(|| {
         let mut hasher = MeowHasher::new();
         hasher.input(&blob);
-        hasher.result()
+        hasher.finalise()
     })
 }
 
@@ -52,7 +52,7 @@ fn hash_5_1g(b: &mut Bencher) {
 
 fn digest_n(size: usize, b: &mut Bencher) {
     let blob = rand_blob(size);
-    b.iter(|| MeowHasher::digest(&blob))
+    b.iter(|| MeowHasher::hash(&blob))
 }
 
 #[bench]
@@ -78,4 +78,44 @@ fn digest_4_16m(b: &mut Bencher) {
 #[bench]
 fn digest_5_1g(b: &mut Bencher) {
     digest_n(1024 * 1024 * 1024, b)
+}
+
+#[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+fn ffi_hash_n(size: usize, b: &mut Bencher) {
+    let blob = rand_blob(size);
+    b.iter(|| {
+        let mut hasher = meowhash::ffi::CMeowHasher::new();
+        hasher.absorb(&blob);
+        hasher.end()
+    })
+}
+
+#[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+#[bench]
+fn ffi_hash_1_16k(b: &mut Bencher) {
+    ffi_hash_n(16 * 1024, b)
+}
+
+#[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+#[bench]
+fn ffi_hash_2_128k(b: &mut Bencher) {
+    ffi_hash_n(128 * 1024, b)
+}
+
+#[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+#[bench]
+fn ffi_hash_3_1m(b: &mut Bencher) {
+    ffi_hash_n(1024 * 1024, b)
+}
+
+#[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+#[bench]
+fn ffi_hash_4_16m(b: &mut Bencher) {
+    ffi_hash_n(16 * 1024 * 1024, b)
+}
+
+#[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+#[bench]
+fn ffi_hash_5_1g(b: &mut Bencher) {
+    ffi_hash_n(1024 * 1024 * 1024, b)
 }
