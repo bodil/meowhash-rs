@@ -557,6 +557,12 @@ mod test {
         let doge = include_bytes!("../test/follow-your-dreams.jpg");
         let hash = MeowHasher::hash(doge);
         assert_eq!(hash, expected);
+
+        #[cfg(all(feature = "ffi", any(target_arch = "x86_64", target_arch = "x86")))]
+        {
+            let hash2 = ffi::CMeowHasher::hash(doge);
+            assert_eq!(hash2, expected);
+        }
     }
 
     proptest! {
