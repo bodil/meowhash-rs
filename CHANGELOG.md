@@ -11,7 +11,7 @@ adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 -   `meowhash` has been rewritten to match version 0.5 of the upstream implementation, which is more
     resistant to adversarial attacks, and a bit faster on some CPUs. As a consequence of this, it no
-    longer supports the `aarch64` architecture, because upstream also currently doesn't. (#4, #6)
+    longer supports the `aarch64` architecture, because upstream also currently doesn't. (#4, #8)
 
 ## [0.1.3] - 2020-01-27
 
