@@ -12,11 +12,11 @@ keywords = ["meow", "hash", "digest"]
 edition = "2018"
 
 [dependencies]
-digest = "0.8.0"
+digest = "0.9"
 libc = { version = "0.2.67", optional = true }
 
 [dev-dependencies]
-proptest = "0.9.1"
+proptest = "0.10"
 
 [build-dependencies]
 cc = { version = "1.0.50", optional = true }

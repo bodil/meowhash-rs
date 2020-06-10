@@ -20,7 +20,7 @@ fn hash_n(size: usize, b: &mut Bencher) {
     let blob = rand_blob(size);
     b.iter(|| {
         let mut hasher = MeowHasher::new();
-        hasher.input(&blob);
+        hasher.update(&blob);
         hasher.finalise()
     })
 }

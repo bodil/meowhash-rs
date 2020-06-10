@@ -168,9 +168,9 @@ impl MeowHash {
         let ingest_count = (256 / seed.len()) + 2;
         // Would have preferred this to use to_be_bytes() to be stable across platforms,
         // but the reference impl doesn't do this, so we try to stay compatible.
-        hasher.input((seed.len() as u64).to_ne_bytes());
+        hasher.update((seed.len() as u64).to_ne_bytes());
         for _ in 0..ingest_count {
-            hasher.input(seed);
+            hasher.update(seed);
         }
         hasher.finalise()
     }
@@ -496,27 +496,21 @@ impl Digest for MeowHasher {
         Self::with_seed(MeowHash::default_seed())
     }
 
-    fn input<B>(&mut self, bytes: B)
-    where
-        B: AsRef<[u8]>,
-    {
+    fn update(&mut self, bytes: impl AsRef<[u8]>) {
         unsafe { self.absorb(bytes.as_ref()) }
     }
 
-    fn chain<B>(mut self, bytes: B) -> Self
-    where
-        B: AsRef<[u8]>,
-    {
-        self.input(bytes);
+    fn chain(mut self, bytes: impl AsRef<[u8]>) -> Self {
+        self.update(bytes);
         self
     }
 
-    fn result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn finalize(mut self) -> GenericArray<u8, Self::OutputSize> {
         unsafe { self.cleanup() };
         self.state.into()
     }
 
-    fn result_reset(&mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn finalize_reset(&mut self) -> GenericArray<u8, Self::OutputSize> {
         unsafe { self.cleanup() };
         let hash = self.state.into();
         self.reset();
@@ -570,7 +564,7 @@ mod test {
         fn hash_same_data(seed in vec(u8::ANY, 128), blob in vec(u8::ANY, 0..65536)) {
             let seed = MeowHash::from_slice(&seed).unwrap();
             let mut hasher = MeowHasher::with_seed(seed);
-            hasher.input(&blob);
+            hasher.update(&blob);
             let hash1 = hasher.finalise();
             let hash2 = MeowHasher::hash_with_seed(seed, &blob);
             // Two hashes of the same data are equal
