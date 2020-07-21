@@ -17,9 +17,14 @@ libc = { version = "0.2.67", optional = true }
 
 [dev-dependencies]
 proptest = "0.10"
+bencher = "0.1.5"
 
 [build-dependencies]
 cc = { version = "1.0.50", optional = true }
 
 [features]
 ffi = ["libc", "cc"]
+
+[[bench]]
+name = "meow"
+harness = false
