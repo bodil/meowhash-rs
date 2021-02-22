@@ -16,7 +16,7 @@ digest = "0.9"
 libc = { version = "0.2.67", optional = true }
 
 [dev-dependencies]
-proptest = "0.10"
+proptest = "1.0"
 bencher = "0.1.5"
 
 [build-dependencies]
