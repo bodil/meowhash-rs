@@ -29,6 +29,7 @@ use core::{
     mem::{self, MaybeUninit},
     sync::atomic::{fence, Ordering},
 };
+pub use digest;
 use digest::generic_array::{
     typenum::{consts::*, Unsigned},
     GenericArray,
